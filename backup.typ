@@ -229,113 +229,23 @@ Otros trabajos como los de @sergiomacias2025 abordan la recompilación y ETL de 
 En literatura, Soriguera et al. (2020) presentan modelos de simulación continua @soriguera2020, y Alvarez-Valdés et al. (2016) algoritmos heurísticos para reposicionamiento @alvarez2016. La plataforma combina precisión algorítmica con interactividad web @kdd2016rebalancing.
 
 
-
 = Desarrollo de la aplicación
-\
+
 #fake_heading[Arquitectura del sistema]
-\
 
-La arquitectura sigue el patrón de microservicios desacoplados con tres capas principales: backend de simulación (bikesim package), API REST (FastAPI) y frontend web (Next.js). El AnalysisOrchestrator centraliza la ejecución, delegando a managers especializados: MatrixManager (procesamiento CSV), ChartManager (gráficos Plotly), MapManager (Voronoi/heatmaps con Selenium), FilterManager (selección dinámica estaciones).
+La aplicación desarrollada sigue una arquitectura cliente-servidor desacoplada, organizada en tres capas principales: un frontend web implementado con Next.js, una API REST construida con FastAPI y un backend de análisis y simulación encapsulado en el paquete `bikesim`.
 
-El frontend consume la API vía endpoints _/api/simulate_, _/api/analyze_, _/api/maps_, renderizando mapas Leaflet sobre OpenStreetMap y gráficos Recharts. Los resultados se almacenan persistentemente en el directorio.results/ con metadatos (parámetros, timestamp, dataset origen), solucionando el problema de pérdida de contexto tras inactividad. Docker Compose orquesta los servicios para despliegue reproducible.
+Esta separación permite aislar la lógica de presentación de la lógica de negocio y del procesamiento de datos, facilitando tanto el mantenimiento del sistema como la reutilización del motor de simulación en otros contextos. El frontend actúa como punto de interacción con el usuario, permitiendo cargar conjuntos de datos, configurar parámetros de simulación y consultar resultados mediante mapas y gráficos interactivos. La API REST funciona como capa intermedia, recibiendo las peticiones del cliente, validando los parámetros de entrada y coordinando la ejecución de los distintos procesos internos. Finalmente, el backend ejecuta las tareas de simulación, análisis, generación de matrices y construcción de artefactos gráficos o geoespaciales.
 
-#fake_heading[Módulos principales]
+La coordinación interna del sistema se centraliza en un componente orquestador denominado `AnalysisOrchestrator`, que delega el trabajo en distintos módulos especializados. Entre ellos destacan `MatrixManager`, encargado del procesamiento de matrices; `ChartManager`, responsable de la generación de gráficos; `MapManager`, que construye las salidas cartográficas; y `FilterManager`, que aplica consultas y selecciones sobre subconjuntos de estaciones. Esta distribución modular permite extender el sistema de forma progresiva sin introducir un fuerte acoplamiento entre componentes.
 
-+ Carga de datos: Upload matrices CSV → validación Pydantic → almacenamiento en el directorio .uploads/
+El frontend consume la API mediante distintos endpoints, entre ellos _/exe/simulate_json_, _/exe/analyze_json_ y renderiza los resultados mediante Leaflet, gráficos dinámicos y componentes de interfaz desarrollados con TypeScript. Los resultados se almacenan de forma persistente en el directorio `.results/`, junto con los metadatos necesarios para reconstruir el contexto de ejecución, evitando así la pérdida de información tras periodos de inactividad.
 
-+ Procesamiento: Orchestrator ejecuta simulación → genera matrices salida (ocupación relativa, peticiones resueltas, km ficticios)
+//figura de la arquiterura aqui
 
-+ Visualización: Mapas interactivos (Voronoi territorios, heatmaps densidad), gráficos (barras peticiones/estación, líneas evolutivas)
+#fake_heading[Flujo de ejecución de una simulación]
 
-+ Simulación: Algoritmo estocástico heredado de Gutiérrez 2023 + escenarios configurables (stress +20% demanda, cambio capacidades estaciones)
-
-+ Historial: Cada resultado (mapa, gráfico, simulación) se asocia a un archivo JSON con parámetros y contexto, permitiendo al usuario entender el origen de cada resultado incluso tras semanas de inactividad.
-
-+ Generador de datos estadisdicos: A partir de las matrices de entrada, permite crear nuevas matrices para crear una nueva simulación, por ejemplo, aumentando la agrupación de deltas o simulando 30 dias de el futuro.
-
-+ Diferenciar directorios: permite al usuario crear una simulación a partir de 2 simulaciónes anteriores, por ejemplo, para comparar el resultado de una simulación con stress de demanda con una simulación sin stress, o para comparar el resultado de una simulación con aumento de flota con una simulación sin aumento de flota.
-
-+ Filtrado dinámico: Permite al usuario seleccionar un subconjunto de estaciones para visualizar en el mapa o en los gráficos, facilitando el análisis focalizado en zonas específicas por conjunto de horas, porcentaje de ocupación o estaciones.
-
-
-
-= Diagrama arquitectura
-
-//insertar diagrama de arquitectura aquí
-
-#fake_heading[Decisiones técnicas]
-
-
-//Incluye 1-2 figuras (diagrama UML/Flowchart via Cetz, snippet código Pydantic/FastAPI). Usa listas numeradas para flujos (e.g., simulación paso a paso).
-\
-La arquitectura adopta microservicios desacoplados en tres capas: backend simulación (paquete bikesim, Python), API REST (FastAPI) y frontend (Next.js con TypeScript). AnalysisOrchestrator centraliza orquestación, delegando a managers: MatrixManager (CSV/Pandas/NumPy), ChartManager (Plotly/Recharts), MapManager (Folium/Selenium + Leaflet), FilterManager (subsets dinámicos). Docker Compose orquesta (volúmenes para /uploads/, /results/ persistentes).
-\
-
-
-= Módulos del Sistema de Simulación
-
-#figure(
-  table(
-    columns: (1.2fr, 3.5fr, 2.5fr),
-    rows: 9,
-    inset: 8pt,
-    align: (left, left, left),
-    stroke: 0.5pt,
-    table.header(
-      [*Tab*],
-      [*Función principal*],
-      [*Inputs/Outputs persistentes*]
-    ),
-    [Dashboard], 
-    [Resumen global (estaciones, bicicletas, stress, delta y distancias)],
-    [`/results/ID/` (resumenEjecucion.txt)],
-    
-    [Simulations],
-    [Ver params clave simulación actual + crear nueva (copia params base)],
-    [`simulations_history.json` + nueva dir],
-  
-    [Analytics Graph Creator],
-    [Historial gráficas + nueva (barras/líneas/frecuencia por matriz)],
-    [`/results/ID/` (JSON metadata)],
-    
-    [Analytics Map Creator],
-    [Historial mapas + nueva (Voronoi/densidad/círculos/desplazamientos)],
-    [`/results/ID/` (HTML + JSON)],
-    
-    [Statistics Generator],
-    [Genera matrices sintéticas para nuevas sims],
-    [`/uploads/generated/` (CSV nuevo)],
-    
-    [Dir Comparison],
-    [Diff 2 sims/dirs (resta matrices: peticiones_stress - baseline)],
-    [`/results/ID/` (matrices nuevas)],
-    
-    [Filter],
-    [Crea/aplica filtros (ocuación, horas, estaciones],
-    [`/results/ID/` (CSV listas)],
-    
-    [History],
-    [Listado todas sims (busca por ciudad/params/stress) + resume/retomar],
-    [`simulations_history.json`],
-    
-  ),
-  caption: [Módulos funcionales y persistencia de datos]
-)
-\
-== Leyenda de rutas
-#grid(
-  columns: (auto, 1fr),
-  rows: 6,
-  gutter: 4pt,
-  [`/results/ID/`], [Resultados de simulación por ID],
-
-  [`/uploads/generated/`], [Matrices sintéticas generadas],
-  [`simulations_history.json`], [Catálogo global de simulaciones],
-)
-
-#fake_heading[Flujo típico:] 
-
-== 1. Frontend generar simulación
+El flujo principal de uso comienza cuando el usuario crea una nueva simulación desde el frontend. Para ello, introduce un nombre identificativo (opcional), selecciona los ficheros de entrada y configura parámetros como el porcentaje de stress, el coste de caminar, el tipo de stress aplicado y el valor de delta temporal. Una vez confirmados estos datos, el frontend envía una petición HTTP al backend en formato `.json`.
 
 #figure(
   ```json
@@ -344,7 +254,7 @@ Content-Type: application/json
 
 {
   "params": {
-    "simname": "Sevilla todos los dias",
+    "simname": "Sevilla todos los días",
     "stress": 50,
     "walk_cost": 50,
     "delta": 60,
@@ -355,64 +265,72 @@ Content-Type: application/json
   }
 }
 ```,
-supplement: ".JSON",
-  caption: [de parámetros enviado desde frontend.],
+  supplement: ".JSON",
+  caption: [Petición enviada desde el frontend para lanzar una nueva simulación.],
 )<SimulationFlow>
 
-== 2. Processing Pipeline
-\
+La API recibe la petición, valida su estructura y la transfiere al orquestador principal, que inicia el flujo de simulación correspondiente.
+
 #align(center)[
-#text(fill: blue)[Frontend] $->$ #text(fill: purple)[Orchestrator] $->$ #text(fill: red)[Simulación estocástica] $->$ #text(fill: orange)[Generación de matrices] $->$ #text(fill: green)[Almacenamiento]
+  #text(fill: blue)[Frontend]
+  $arrow.r$
+  #text(fill: purple)[Orchestrator]
+  $arrow.r$
+  #text(fill: red)[Simulación estocástica]
+  $arrow.r$
+  #text(fill: orange)[Generación de matrices]
+  $arrow.r$
+  #text(fill: green)[Almacenamiento]
 ]
-\
-Al finalizar la simulación, el backend genera matrices de salida (ocupación relativa, peticiones resueltas, km ficticios
-Ocupacion Original, Ocupacion Relativa, Desplazamientos, Kilometros Coger/Dejar/Ficticios, Peticiones No Resueltas/Resueltas Reales/Ficticias, Peticiones resueltas, Resument ejecución). y las almacena en el directorio .results/ con un archivo @jsonTodasSimulaciones asociado que documenta los parámetros y contexto de la ejecución, garantizando que el usuario pueda entender el origen de cada resultado incluso tras periodos de inactividad. 
-Cada simulación se asocia a un ID único (timestamp + parámetros clave) y se documenta en el historial de simulaciones, permitiendo al usuario comparar resultados entre diferentes escenarios (por ejemplo, con o sin stress de demanda) y retomar análisis previos sin pérdida de contexto como se ve en la  @SimulationParametersView. El frontend interpreta el contenido del id para representarlo de forma legible en la interfaz, mostrando el nombre de la simulación, los parámetros clave (stress, walk_cost, delta) y la fecha de creación. 
+
+Durante la ejecución, el sistema procesa las matrices de entrada, aplica el algoritmo estocástico heredado del trabajo de Gutiérrez Jerez @gutierrez2023 y genera como salida un conjunto de matrices derivadas que describen el comportamiento del sistema. Entre estas salidas se incluyen la ocupación original, la ocupación relativa, la matriz de desplazamientos, los kilómetros producidos al coger o dejar bicicletas, los kilómetros ficticios asociados a tendencias no satisfechas, las matrices de peticiones resueltas y no resueltas —tanto reales como ficticias— y un fichero de resumen de ejecución.
+
+#fake_heading[Persistencia y organización de resultados]
+
+Uno de los objetivos principales del sistema es evitar la pérdida de contexto entre sesiones de trabajo. Para ello, cada simulación ejecutada genera un identificador único compuesto por una marca temporal y una codificación compacta de los parámetros más relevantes, como el tipo de stress, el porcentaje aplicado, el coste de caminar y el delta temporal. Esta convención de nombres permite reconocer rápidamente las características principales de una ejecución sin necesidad de abrir manualmente sus archivos asociados.
 
 #figure(
   image("resources/images/SimulationParametersView.png"),
-  caption: [Vista parámetros: frontend interpreta ID (stress, fecha, delta).],
+  caption: [Visualización de los parámetros de una simulación a partir del identificador asociado.],
 )<SimulationParametersView>
-
 
 #figure(
   ```json
 {
-      "simname": "Sevilla todos los dias",
-      "simfolder": "20260317_180130_sim_ST3_S50.00_WC50.00_D60",
-      "simdataId": "20260317_180130_sim_ST3_S50.00_WC50.00_D60",
-      "cityname": "Sevilla",
-      "numberOfStations": 260,
-      "numberOfBikes": 2512,
-      "total_capacity": 5089.0,
-      "avg_capacity": 19.573076923076922,
-      "min_capacity": 10.0,
-      "max_capacity": 40.0,
-      "coordinates": {
-        "avg_lat": 37.38890088461538,
-        "avg_lon": -5.977624423076923
-      },
-      "simdata": {
-        "stress_type": 3,
-        "stress": 50.0,
-        "walk_cost": 50.0,
-        "delta": 60,
-        "dias": []
-      },
-      "path": "results/20260317_180130_sim_ST3_S50.00_WC50.00_D60",
-      "created": "2026-03-17T18:01:31.998931"
-    }
+  "simname": "Sevilla todos los días",
+  "simfolder": "20260317_180130_sim_ST3_S50.00_WC50.00_D60",
+  "simdataId": "20260317_180130_sim_ST3_S50.00_WC50.00_D60",
+  "cityname": "Sevilla",
+  "numberOfStations": 260,
+  "numberOfBikes": 2512,
+  "total_capacity": 5089.0,
+  "avg_capacity": 19.573076923076922,
+  "min_capacity": 10.0,
+  "max_capacity": 40.0,
+  "coordinates": {
+    "avg_lat": 37.38890088461538,
+    "avg_lon": -5.977624423076923
+  },
+  "simdata": {
+    "stress_type": 3,
+    "stress": 50.0,
+    "walk_cost": 50.0,
+    "delta": 60,
+    "dias": []
+  },
+  "path": "results/20260317_180130_sim_ST3_S50.00_WC50.00_D60",
+  "created": "2026-03-17T18:01:31.998931"
+}
 ```,
-supplement: ".JSON",
-  caption: [Entrada en simulations_history.json: metadatos por simulación.],
+  supplement: ".JSON",
+  caption: [Entrada en `simulations_history.json` con los metadatos de una simulación.],
 )<jsonTodasSimulaciones>
-\
 
+Además, el sistema mantiene un fichero global denominado `simulations_history.json`, que actúa como catálogo general de simulaciones. En él se registran datos como el nombre de la simulación, el identificador interno, la ciudad, el número de estaciones, el número de bicicletas, la capacidad total, las coordenadas medias y los parámetros concretos utilizados.
 
 #figure(
   table(
     columns: (1fr, 3fr, 1fr),
-    rows: 4,
     inset: 10pt,
     align: horizon,
     table.header(
@@ -420,14 +338,15 @@ supplement: ".JSON",
       [*Descripción*],
       [*Ejemplo*]
     ),
-    [ST], [Stress type (0: none, 1: walk, 2: bikes, 3: both)], [`ST3`],
-    [S], [% Stress], [`S50.00`],
-    [WC], [Walk cost %], [`WC50.00`],
-    [D], [Delta minutos], [`D60`]
+    [ST], [Tipo de stress aplicado (0: none, 1: walk, 2: bikes, 3: both)], [`ST3`],
+    [S], [Porcentaje de stress], [`S50.00`],
+    [WC], [Walk cost], [`WC50.00`],
+    [D], [Delta temporal en minutos], [`D60`]
   ),
-  caption: [Convención de nomenclatura para simulaciones]
-)
-Convención de estrucutura del directorio:
+  caption: [Convención de nomenclatura empleada en los identificadores de simulación.],
+)<SimulationNaming>
+
+Convención de estructura del directorio:
 
 #quote(block: true)[
   `20260317_180047_sim_`#text(fill: blue)[`ST3`]_#text(fill: red)[`S50.00`]_#text(fill: green)[`WC50.00`]#text(fill: purple)[`D60`]
@@ -437,75 +356,125 @@ Convención de estrucutura del directorio:
   columns: (auto, auto),
   rows: (auto, auto, auto, auto),
   gutter: 5pt,
-  [ #text(fill: blue)[■] ST3: ], [ Stress type 3 (both walk & bikes) ],
-  [ #text(fill: red)[■] S50.00: ], [ 50% stress level ],
-  [ #text(fill: green)[■] WC50.00: ], [ 50% walk cost ],
-  [ #text(fill: purple)[■] D60: ], [ 60 minute delta interval ]
+  [#text(fill: blue)[■] ST3:], [Tipo de stress 3 (walk + bikes)],
+  [#text(fill: red)[■] S50.00:], [50% de stress],
+  [#text(fill: green)[■] WC50.00:], [50% de coste de caminata],
+  [#text(fill: purple)[■] D60:], [Delta de 60 minutos]
 )
 
-== 1. Upload & Nueva simulación:
-\
-  - Usuario sube CSV → validación de datos → crea entrada @jsonTodasSimulaciones (ID: timestamp_ST\#_S%_WC%\_Dmin).
+A nivel de almacenamiento, el sistema crea dos tipos de directorios. Por un lado, en `.uploads/` se conserva la entrada original asociada a la ejecución. Por otro, en `.results/` se almacena un directorio específico para la simulación, que contiene tanto las matrices generadas como los metadatos necesarios para su trazabilidad.
+Aunque la aplicacion sea web, la versión actual esta pensaba para trabajar localmente, por lo que conserva los ficheros de upload, en una aplicacion desplegada en un servidor remoto, tener todos los uploads de diferentes simulaciones almacenados. En una versión futura, se podría plantear un sistema de almacenamiento en la nube o una base de datos para gestionar estos archivos de forma más escalable y segura, especialmente si se prevé un uso concurrente por parte de múltiples usuarios.
 
-  - Crea dirs: /uploads/timestampUpload + /results/ID/ (outputs: matrices + metadatos).
+#figure(
+  image("resources/images/resultsDirStructure.png"),
+  caption: [Estructura de directorios de resultados y metadatos asociados a una simulación.],
+)<ResultsStructure>
 
-  #figure(
-    image("resources/images/resultsDirStructure.png"),
-    caption: [Estructura de directorios para resultados: /results/ID/ con matrices + metadatos.],
-  )
-\
+#fake_heading[Módulos funcionales de la aplicación]
 
-Desde el Frontend la simulación se lanza mediante un formulario que recoge los parámetros clave (nombre, stress, walk cost, delta) y el archivo CSV de entrada con una interfaz web orientada a la usabilidad de manera intuitiva.
+Una vez seleccionada una simulación, la aplicación ofrece un conjunto de módulos funcionales organizados en distintas áreas de trabajo. Todos ellos comparten la misma idea de persistencia: cualquier artefacto generado queda asociado a la simulación activa y puede recuperarse posteriormente desde el historial.
 
-*Flujo de creación:*
+#figure(
+  table(
+    columns: (1.3fr, 3.4fr, 2.4fr),
+    inset: 8pt,
+    align: (left, left, left),
+    stroke: 0.5pt,
+    table.header(
+      [*Módulo*],
+      [*Función principal*],
+      [*Persistencia*]
+    ),
+    [Dashboard],
+    [Resumen global de la simulación actual: estaciones, bicicletas, stress, delta y distancias],
+    [`/results/ID/` (`resumenEjecucion.txt`)],
 
-1. El usuario elige un nombre para la simulación y hace upload de los datos de entrada.
+    [Simulations],
+    [Consulta de parámetros de la simulación actual y creación de nuevas simulaciones a partir de una base],
+    [`simulations_history.json` + nuevo directorio],
+
+    [Analytics Graph Creator],
+    [Historial y generación de nuevas gráficas a partir de matrices de salida],
+    [`/results/ID/` (metadatos `.json`)],
+
+    [Analytics Map Creator],
+    [Historial y generación de nuevos mapas: Voronoi, densidad, círculos y desplazamientos],
+    [`/results/ID/` (`.html` + `.json`)],
+
+    [Statistics Generator],
+    [Generación de matrices sintéticas para futuras simulaciones],
+    [`/uploads/generated/` (`.csv`)],
+
+    [Dir Comparison],
+    [Comparación entre dos simulaciones mediante diferencia de matrices],
+    [`/results/ID/` (matrices derivadas)],
+
+    [Filter],
+    [Aplicación de filtros por ocupación, horas o subconjuntos de estaciones],
+    [`/results/ID/` (listas `.csv`)],
+
+    [History],
+    [Listado global de simulaciones y recuperación del contexto de trabajo],
+    [`simulations_history.json`]
+  ),
+  caption: [Módulos funcionales de la aplicación y persistencia de datos asociada.],
+)<ModulesTable>
+
+#fake_heading[Interfaz de usuario]
+
+La interfaz web se ha diseñado con un enfoque orientado a la usabilidad, reduciendo la barrera de entrada para usuarios no técnicos. El flujo de creación de una simulación se organiza en varios pasos guiados.
+
+Desde el frontend, la simulación se lanza mediante un formulario que recoge los parámetros clave —nombre, stress, walk cost y delta— junto con el fichero `.csv` de entrada. El proceso de creación se articula del siguiente modo:
+
+1. El usuario asigna un nombre a la simulación y realiza la carga de los ficheros de entrada.
 
 #figure(
   image("resources/images/SimSteps1.png", height: 50%),
-  caption: [Formulario de upload: nombre simulación + CSV entrada.],
-) <UploadForm>
+  caption: [Formulario inicial para la creación de una simulación.],
+)<UploadForm>
 
-2. Al continuar para el segundo paso, elije los parámetros de stress para la simulación a través de un slider para que el input sea más visual e intuitivo.
+2. En un segundo paso, ajusta los parámetros de stress mediante controles visuales tipo slider, con el objetivo de hacer la interacción más intuitiva.
 
 #figure(
   image("resources/images/SimSteps2.png", height: 50%),
-  caption: [Selección de parámetros de stress mediante sliders.],
-) <SimParams>
+  caption: [Selección visual de parámetros de stress mediante sliders.],
+)<SimParams>
 
-3. Finalmente, el usuario elije el tipo de stress, el delta de la simulación y confirma los parámetros y lanza la simulación, que se ejecuta en el backend y genera los resultados asociados al ID de la simulación, quedando documentados en el historial para su consulta futura.
+3. Finalmente, selecciona el tipo de stress, el delta temporal y confirma la configuración antes de lanzar la simulación.
 
+#figure(
+  image("resources/images/SimStepsLast.png", height: 50%),
+  caption: [Confirmación final de parámetros antes de ejecutar la simulación.],
+)<SimLaunch>
 
-Para mayor facilidad de uso, el sistema se asegura que el usuario ha enviado un CSV válido comprobando la cantidad y si atiende a la convención de nombres antes de permitir avanzar a la selección de parámetros.
+Para mejorar la robustez del flujo de entrada, el sistema comprueba automáticamente que los ficheros cargados cumplen la convención esperada y que su estructura es válida antes de permitir avanzar a la configuración de parámetros.
 
 #figure(
   image("resources/images/uploadcomponetCheck.png", height: 50%),
-  caption: [Comprobación de datos de entrada.],
-) <SimLaunch>
+  caption: [Validación automática de los ficheros de entrada antes de iniciar la simulación.],
+)<InputValidation>
 
+Una vez finalizada la ejecución, el usuario accede a un conjunto de vistas asociadas a la simulación activa.
 
-= Post simulación:
-\
 == Dashboard
-\
-En el Dashdoard (@Dashboard) nos permite visualizar un resumen global de la simulación actual, mostrando métricas clave como el id de la simulación, el delta, stress y las distancias totales. Esta información se extrae del archivo resumenEjecucion.txt generado al finalizar cada simulación y se muestra de forma clara para que el usuario pueda entender rápidamente las características principales de la simulación que está analizando.
-\
+
+El módulo Dashboard permite visualizar un resumen global de la simulación actual, mostrando métricas clave como el identificador de la simulación, el delta temporal, el nivel de stress y las distancias totales recorridas. Esta información se extrae del fichero `resumenEjecucion.txt` generado al finalizar cada ejecución y se presenta de forma sintética para proporcionar contexto inmediato sobre la simulación que se está analizando.
+
 #figure(
   image("resources/images/dashBoardNosidebar.png"),
-  caption: [Dashboard: resumen global de la simulación actual.],
+  caption: [Dashboard con resumen global de la simulación activa.],
 )<Dashboard>
 
-\
-== Área de simulación
+== Área principal de simulación
 
-En el área de simulación, el usuario puede visualizar los resultados de la simulación actual a través de mapas interactivos y gráficos dinámicos. El mapa muestra la capacidad de cada estación, mientras que los gráficos permiten analizar el número de estaciones, la ciudad en la que se trabaja, el número de bicicletas, la capacidad total del sistema y la capacidad media. 
+En el área principal de simulación, el usuario puede visualizar los resultados a través de mapas interactivos y gráficos dinámicos. El mapa muestra la capacidad de cada estación y su distribución espacial, mientras que los paneles laterales resumen datos como el número de estaciones, la ciudad, el número de bicicletas, la capacidad total del sistema y la capacidad media.
 
 #figure(
   image("resources/images/SimNoSideBarpt1.png"),
-  caption: [Área de simulación: mapa interactivo y resumen de métricas.],
+  caption: [Área principal de simulación con mapa interactivo y métricas agregadas.],
 )<SimulationArea>
 
-Tambien podemos visualizar la performance del sistema a través de métricas como el porcentaje de stress aplicado, el número total de operaciones realizadas, la tasa de éxito general y la distancia media por operación. Estos indicadores nos permiten evaluar la eficiencia del sistema bajo diferentes escenarios de stress y entender cómo se comporta la red de bicicletas compartidas en condiciones variables usando gráficas claras.
+Además, se representan indicadores de rendimiento como el porcentaje de stress aplicado, el número total de operaciones realizadas, la tasa de éxito general y la distancia media por operación. Estos elementos permiten evaluar el comportamiento del sistema bajo distintos escenarios y facilitan la interpretación comparativa de los resultados.
 
 #align(center)[
   #figure(
@@ -519,7 +488,51 @@ Tambien podemos visualizar la performance del sistema a través de métricas com
         #image("resources/images/SimNoSideBarpt3.png", width: 100%)
       ]
     ),
-    caption: [Gráficas de análisis: evolución temporal, histogramas, comparativas.],
-  ) <CombinedSimViews>
+    caption: [Gráficas de análisis asociadas a la simulación: comparativas, evolución temporal e indicadores agregados.],
+  )<CombinedSimViews>
 ]
+
+#fake_heading[Decisiones técnicas]
+
+Desde el punto de vista técnico, la elección de FastAPI se justifica por su integración con Pydantic para la validación de datos, su facilidad para definir endpoints REST y su capacidad para estructurar el backend de forma clara y extensible. En el frontend, Next.js con TypeScript permite organizar la interfaz en componentes reutilizables, mejorando la mantenibilidad del código y la consistencia de la experiencia de usuario.
+
+En la capa de análisis y representación se han seleccionado bibliotecas específicas según el tipo de salida. Pandas y NumPy se utilizan para el tratamiento de matrices y cálculos numéricos; Folium, Geovoronoi y Shapely se emplean para las operaciones geoespaciales; y bibliotecas como Recharts, Plotly o Leaflet se integran para la construcción de gráficos y mapas interactivos.
+
+Por su parte, Docker y Docker Compose se han adoptado como mecanismo de despliegue reproducible, encapsulando backend, frontend y dependencias auxiliares en contenedores aislados. Esto simplifica la puesta en marcha del sistema, reduce problemas de configuración entre entornos y facilita la futura distribución del proyecto.
+
+#figure(
+  table(
+    columns: (1.5fr, 2fr, 2.8fr),
+    inset: 8pt,
+    stroke: 0.5pt,
+    table.header(
+      [*Tecnología*],
+      [*Capa*],
+      [*Motivo de elección*]
+    ),
+    [FastAPI], [Backend/API], [Definición clara de endpoints REST, validación de entrada y buena integración con Pydantic],
+    [Next.js + TypeScript], [Frontend], [Componentización, mantenibilidad y construcción de interfaz moderna],
+    [Pandas + NumPy], [Procesamiento], [Manipulación eficiente de matrices y operaciones numéricas],
+    [Leaflet + Folium], [Visualización geoespacial], [Representación flexible de mapas interactivos y generación de salidas cartográficas],
+    [Docker Compose], [Despliegue], [Reproducibilidad, aislamiento de dependencias y facilidad de configuración]
+  ),
+  caption: [Principales decisiones tecnológicas adoptadas en el desarrollo del sistema.],
+)<TechDecisions>
+#fake_heading[Alcance funcional de la implementación]
+
+La versión final de la aplicación implementa de forma integrada los bloques principales necesarios para el análisis de redes de bicicletas compartidas: carga y validación de datos de entrada, ejecución de simulaciones, generación de matrices derivadas, persistencia de resultados, análisis gráfico, visualización cartográfica, comparación entre escenarios, filtrado de estaciones y generación estadística de nuevos datos.
+
+Desde el punto de vista funcional, el sistema permite trabajar sobre una simulación activa y reutilizar su contexto en todas las vistas de la aplicación. Esto evita la fragmentación del análisis y garantiza que cualquier mapa, gráfico, filtro o comparación quede asociado a un identificador de simulación concreto. Como consecuencia, el usuario puede retomar el trabajo en sesiones posteriores sin perder el contexto de los parámetros utilizados ni el origen de los datos procesados.
+
+La implementación desarrollada también mejora varios aspectos respecto a herramientas previas centradas en ejecución local o uso por línea de comandos. En particular, se ha reforzado la usabilidad mediante una interfaz web guiada, se ha incorporado persistencia explícita del historial de simulaciones y se ha unificado en una única plataforma el conjunto de utilidades de simulación, análisis y exploración visual, ampliando así el alcance práctico del sistema @gutierrez2023.
+
+Además, la estructura modular adoptada permite incorporar futuras extensiones sin necesidad de rediseñar el sistema completo. La separación entre frontend, API REST y backend de simulación facilita tanto la sustitución de componentes concretos como la integración de nuevas fuentes de datos, métricas analíticas o técnicas de predicción sobre el comportamiento de la red.
+
+#fake_heading[Transición a la evaluación experimental]
+
+Una vez descrita la arquitectura, el flujo interno de ejecución, la organización persistente de resultados y los principales módulos funcionales, el siguiente paso consiste en evaluar la utilidad de la plataforma sobre escenarios concretos de análisis. Para ello, en la siguiente sección se presentan distintos experimentos realizados sobre datos reales, donde la aplicación se utiliza como herramienta para diagnosticar el estado de la red, visualizar patrones espaciales y temporales, comparar configuraciones alternativas y estudiar el impacto de diferentes escenarios de stress, modificación de capacidades o generación sintética de movimientos.
+
+De este modo, la sección siguiente no se centra ya en cómo está construida la aplicación, sino en qué conocimiento permite extraer y en qué medida los resultados obtenidos pueden servir como apoyo a la toma de decisiones en contextos de movilidad urbana sostenible.
+
+
 
