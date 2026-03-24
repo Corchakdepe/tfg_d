@@ -5,7 +5,9 @@
 #import "@preview/diagraph:0.2.5": *
 #bibliography("biblio.bib")
 #set text(spacing: 120%, lang: "es")
-
+#set text(
+  lang: "sp"
+)
 
 #let title = "Aplicación de analisis de redes de bicicletas compartidas"
 #set page(numbering: "- 1 -")
@@ -204,8 +206,50 @@ Requisitos de bibliotecas y frameworks
 
 + Internacionalización: i18next para ofrecer la interfaz en al menos español, portugués e inglés, facilitando la extensión del sistema a distintos contextos.
 
-#pagebreak()
 
+#fake_heading[Decisiones técnicas]
+
+Desde el punto de vista técnico, la elección de FastAPI se justifica por su integración con Pydantic para la validación de datos, su facilidad para definir endpoints REST y su capacidad para estructurar el backend de forma clara y extensible. En el frontend, Next.js con TypeScript permite organizar la interfaz en componentes reutilizables, mejorando la mantenibilidad del código y la consistencia de la experiencia de usuario.
+
+En la capa de análisis y representación se han seleccionado bibliotecas específicas según el tipo de salida. Pandas y NumPy se utilizan para el tratamiento de matrices y cálculos numéricos; Folium, Geovoronoi y Shapely se emplean para las operaciones geoespaciales; y bibliotecas como Recharts, Plotly o Leaflet se integran para la construcción de gráficos y mapas interactivos.
+
+Por su parte, Docker y Docker Compose se han adoptado como mecanismo de despliegue reproducible, encapsulando backend, frontend y dependencias auxiliares en contenedores aislados. Esto simplifica la puesta en marcha del sistema, reduce problemas de configuración entre entornos y facilita la futura distribución del proyecto.
+
+#figure(
+  table(
+    columns: (1.5fr, 2fr, 2.8fr),
+    inset: 8pt,
+    stroke: 0.5pt,
+    table.header(
+      [*Tecnología*],
+      [*Capa*],
+      [*Motivo de elección*]
+    ),
+    [FastAPI], [Backend/API], [Definición clara de endpoints REST, validación de entrada y buena integración con Pydantic],
+    [Next.js + TypeScript], [Frontend], [Componentización, mantenibilidad y construcción de interfaz moderna],
+    [Pandas + NumPy], [Procesamiento], [Manipulación eficiente de matrices y operaciones numéricas],
+    [Leaflet + Folium], [Visualización geoespacial], [Representación flexible de mapas interactivos y generación de salidas cartográficas],
+    [Docker Compose], [Despliegue], [Reproducibilidad, aislamiento de dependencias y facilidad de configuración]
+  ),
+  caption: [Principales decisiones tecnológicas adoptadas en el desarrollo del sistema.],
+)<TechDecisions>
+#fake_heading[Alcance funcional de la implementación]
+
+La versión final de la aplicación implementa de forma integrada los bloques principales necesarios para el análisis de redes de bicicletas compartidas: carga y validación de datos de entrada, ejecución de simulaciones, generación de matrices derivadas, persistencia de resultados, análisis gráfico, visualización cartográfica, comparación entre escenarios, filtrado de estaciones y generación estadística de nuevos datos.
+
+Desde el punto de vista funcional, el sistema permite trabajar sobre una simulación activa y reutilizar su contexto en todas las vistas de la aplicación. Esto evita la fragmentación del análisis y garantiza que cualquier mapa, gráfico, filtro o comparación quede asociado a un identificador de simulación concreto. Como consecuencia, el usuario puede retomar el trabajo en sesiones posteriores sin perder el contexto de los parámetros utilizados ni el origen de los datos procesados.
+
+La implementación desarrollada también mejora varios aspectos respecto a herramientas previas centradas en ejecución local o uso por línea de comandos. En particular, se ha reforzado la usabilidad mediante una interfaz web guiada, se ha incorporado persistencia explícita del historial de simulaciones y se ha unificado en una única plataforma el conjunto de utilidades de simulación, análisis y exploración visual, ampliando así el alcance práctico del sistema @gutierrez2023.
+
+Además, la estructura modular adoptada permite incorporar futuras extensiones sin necesidad de rediseñar el sistema completo. La separación entre frontend, API REST y backend de simulación facilita tanto la sustitución de componentes concretos como la integración de nuevas fuentes de datos, métricas analíticas o técnicas de predicción sobre el comportamiento de la red.
+
+#fake_heading[Transición a la evaluación experimental]
+
+Una vez descrita la arquitectura, el flujo interno de ejecución, la organización persistente de resultados y los principales módulos funcionales, el siguiente paso consiste en evaluar la utilidad de la plataforma sobre escenarios concretos de análisis. Para ello, en la siguiente sección se presentan distintos experimentos realizados sobre datos reales, donde la aplicación se utiliza como herramienta para diagnosticar el estado de la red, visualizar patrones espaciales y temporales, comparar configuraciones alternativas y estudiar el impacto de diferentes escenarios de stress, modificación de capacidades o generación sintética de movimientos.
+
+De este modo, la sección siguiente no se centra ya en cómo está construida la aplicación, sino en qué conocimiento permite extraer y en qué medida los resultados obtenidos pueden servir como apoyo a la toma de decisiones en contextos de movilidad urbana sostenible.
+
+\
 = Estado del arte
 
 #fake_heading[Sistemas de bicicletas compartidas]
@@ -242,6 +286,8 @@ La coordinación interna del sistema se centraliza en un componente orquestador 
 El frontend consume la API mediante distintos endpoints, entre ellos _/exe/simulate_json_, _/exe/analyze_json_ y renderiza los resultados mediante Leaflet, gráficos dinámicos y componentes de interfaz desarrollados con TypeScript. Los resultados se almacenan de forma persistente en el directorio `.results/`, junto con los metadatos necesarios para reconstruir el contexto de ejecución, evitando así la pérdida de información tras periodos de inactividad.
 
 //figura de la arquiterura aqui
+
+
 
 #fake_heading[Flujo de ejecución de una simulación]
 
@@ -370,6 +416,9 @@ Aunque la aplicacion sea web, la versión actual esta pensaba para trabajar loca
   caption: [Estructura de directorios de resultados y metadatos asociados a una simulación.],
 )<ResultsStructure>
 
+
+= Interfaz de usuario
+
 #fake_heading[Módulos funcionales de la aplicación]
 
 Una vez seleccionada una simulación, la aplicación ofrece un conjunto de módulos funcionales organizados en distintas áreas de trabajo. Todos ellos comparten la misma idea de persistencia: cualquier artefacto generado queda asociado a la simulación activa y puede recuperarse posteriormente desde el historial.
@@ -420,42 +469,6 @@ Una vez seleccionada una simulación, la aplicación ofrece un conjunto de módu
   caption: [Módulos funcionales de la aplicación y persistencia de datos asociada.],
 )<ModulesTable>
 
-#fake_heading[Interfaz de usuario]
-
-La interfaz web se ha diseñado con un enfoque orientado a la usabilidad, reduciendo la barrera de entrada para usuarios no técnicos. El flujo de creación de una simulación se organiza en varios pasos guiados.
-
-Desde el frontend, la simulación se lanza mediante un formulario que recoge los parámetros clave —nombre, stress, walk cost y delta— junto con el fichero `.csv` de entrada. El proceso de creación se articula del siguiente modo:
-
-1. El usuario asigna un nombre a la simulación y realiza la carga de los ficheros de entrada.
-
-#figure(
-  image("resources/images/SimSteps1.png", height: 50%),
-  caption: [Formulario inicial para la creación de una simulación.],
-)<UploadForm>
-
-2. En un segundo paso, ajusta los parámetros de stress mediante controles visuales tipo slider, con el objetivo de hacer la interacción más intuitiva.
-
-#figure(
-  image("resources/images/SimSteps2.png", height: 50%),
-  caption: [Selección visual de parámetros de stress mediante sliders.],
-)<SimParams>
-
-3. Finalmente, selecciona el tipo de stress, el delta temporal y confirma la configuración antes de lanzar la simulación.
-
-#figure(
-  image("resources/images/SimStepsLast.png", height: 50%),
-  caption: [Confirmación final de parámetros antes de ejecutar la simulación.],
-)<SimLaunch>
-
-Para mejorar la robustez del flujo de entrada, el sistema comprueba automáticamente que los ficheros cargados cumplen la convención esperada y que su estructura es válida antes de permitir avanzar a la configuración de parámetros.
-
-#figure(
-  image("resources/images/uploadcomponetCheck.png", height: 50%),
-  caption: [Validación automática de los ficheros de entrada antes de iniciar la simulación.],
-)<InputValidation>
-
-Una vez finalizada la ejecución, el usuario accede a un conjunto de vistas asociadas a la simulación activa.
-
 == Dashboard
 
 El módulo Dashboard permite visualizar un resumen global de la simulación actual, mostrando métricas clave como el identificador de la simulación, el delta temporal, el nivel de stress y las distancias totales recorridas. Esta información se extrae del fichero `resumenEjecucion.txt` generado al finalizar cada ejecución y se presenta de forma sintética para proporcionar contexto inmediato sobre la simulación que se está analizando.
@@ -492,47 +505,41 @@ Además, se representan indicadores de rendimiento como el porcentaje de stress 
   )<CombinedSimViews>
 ]
 
-#fake_heading[Decisiones técnicas]
 
-Desde el punto de vista técnico, la elección de FastAPI se justifica por su integración con Pydantic para la validación de datos, su facilidad para definir endpoints REST y su capacidad para estructurar el backend de forma clara y extensible. En el frontend, Next.js con TypeScript permite organizar la interfaz en componentes reutilizables, mejorando la mantenibilidad del código y la consistencia de la experiencia de usuario.
+La interfaz web se ha diseñado con un enfoque orientado a la usabilidad, reduciendo la barrera de entrada para usuarios no técnicos. El flujo de creación de una simulación se organiza en varios pasos guiados.
 
-En la capa de análisis y representación se han seleccionado bibliotecas específicas según el tipo de salida. Pandas y NumPy se utilizan para el tratamiento de matrices y cálculos numéricos; Folium, Geovoronoi y Shapely se emplean para las operaciones geoespaciales; y bibliotecas como Recharts, Plotly o Leaflet se integran para la construcción de gráficos y mapas interactivos.
+Desde el frontend, la simulación se lanza mediante un formulario que recoge los parámetros clave —nombre, stress, walk cost y delta— junto con el fichero `.csv` de entrada. El proceso de creación se articula del siguiente modo:
 
-Por su parte, Docker y Docker Compose se han adoptado como mecanismo de despliegue reproducible, encapsulando backend, frontend y dependencias auxiliares en contenedores aislados. Esto simplifica la puesta en marcha del sistema, reduce problemas de configuración entre entornos y facilita la futura distribución del proyecto.
+1. El usuario asigna un nombre a la simulación y realiza la carga de los ficheros de entrada.
 
 #figure(
-  table(
-    columns: (1.5fr, 2fr, 2.8fr),
-    inset: 8pt,
-    stroke: 0.5pt,
-    table.header(
-      [*Tecnología*],
-      [*Capa*],
-      [*Motivo de elección*]
-    ),
-    [FastAPI], [Backend/API], [Definición clara de endpoints REST, validación de entrada y buena integración con Pydantic],
-    [Next.js + TypeScript], [Frontend], [Componentización, mantenibilidad y construcción de interfaz moderna],
-    [Pandas + NumPy], [Procesamiento], [Manipulación eficiente de matrices y operaciones numéricas],
-    [Leaflet + Folium], [Visualización geoespacial], [Representación flexible de mapas interactivos y generación de salidas cartográficas],
-    [Docker Compose], [Despliegue], [Reproducibilidad, aislamiento de dependencias y facilidad de configuración]
-  ),
-  caption: [Principales decisiones tecnológicas adoptadas en el desarrollo del sistema.],
-)<TechDecisions>
-#fake_heading[Alcance funcional de la implementación]
+  image("resources/images/SimSteps1.png", height: 50%),
+  caption: [Formulario inicial para la creación de una simulación.],
+)<UploadForm>
 
-La versión final de la aplicación implementa de forma integrada los bloques principales necesarios para el análisis de redes de bicicletas compartidas: carga y validación de datos de entrada, ejecución de simulaciones, generación de matrices derivadas, persistencia de resultados, análisis gráfico, visualización cartográfica, comparación entre escenarios, filtrado de estaciones y generación estadística de nuevos datos.
+2. En un segundo paso, ajusta los parámetros de stress mediante controles visuales tipo slider, con el objetivo de hacer la interacción más intuitiva.
 
-Desde el punto de vista funcional, el sistema permite trabajar sobre una simulación activa y reutilizar su contexto en todas las vistas de la aplicación. Esto evita la fragmentación del análisis y garantiza que cualquier mapa, gráfico, filtro o comparación quede asociado a un identificador de simulación concreto. Como consecuencia, el usuario puede retomar el trabajo en sesiones posteriores sin perder el contexto de los parámetros utilizados ni el origen de los datos procesados.
+#figure(
+  image("resources/images/SimSteps2.png", height: 50%),
+  caption: [Selección visual de parámetros de stress mediante sliders.],
+)<SimParams>
 
-La implementación desarrollada también mejora varios aspectos respecto a herramientas previas centradas en ejecución local o uso por línea de comandos. En particular, se ha reforzado la usabilidad mediante una interfaz web guiada, se ha incorporado persistencia explícita del historial de simulaciones y se ha unificado en una única plataforma el conjunto de utilidades de simulación, análisis y exploración visual, ampliando así el alcance práctico del sistema @gutierrez2023.
+3. Finalmente, selecciona el tipo de stress, el delta temporal y confirma la configuración antes de lanzar la simulación.
 
-Además, la estructura modular adoptada permite incorporar futuras extensiones sin necesidad de rediseñar el sistema completo. La separación entre frontend, API REST y backend de simulación facilita tanto la sustitución de componentes concretos como la integración de nuevas fuentes de datos, métricas analíticas o técnicas de predicción sobre el comportamiento de la red.
+#figure(
+  image("resources/images/SimStepsLast.png", height: 50%),
+  caption: [Confirmación final de parámetros antes de ejecutar la simulación.],
+)<SimLaunch>
 
-#fake_heading[Transición a la evaluación experimental]
+Para mejorar la robustez del flujo de entrada, el sistema comprueba automáticamente que los ficheros cargados cumplen la convención esperada y que su estructura es válida antes de permitir avanzar a la configuración de parámetros.
 
-Una vez descrita la arquitectura, el flujo interno de ejecución, la organización persistente de resultados y los principales módulos funcionales, el siguiente paso consiste en evaluar la utilidad de la plataforma sobre escenarios concretos de análisis. Para ello, en la siguiente sección se presentan distintos experimentos realizados sobre datos reales, donde la aplicación se utiliza como herramienta para diagnosticar el estado de la red, visualizar patrones espaciales y temporales, comparar configuraciones alternativas y estudiar el impacto de diferentes escenarios de stress, modificación de capacidades o generación sintética de movimientos.
+#figure(
+  image("resources/images/uploadcomponetCheck.png", height: 50%),
+  caption: [Validación automática de los ficheros de entrada antes de iniciar la simulación.],
+)<InputValidation>
 
-De este modo, la sección siguiente no se centra ya en cómo está construida la aplicación, sino en qué conocimiento permite extraer y en qué medida los resultados obtenidos pueden servir como apoyo a la toma de decisiones en contextos de movilidad urbana sostenible.
+Una vez finalizada la ejecución, el usuario accede a un conjunto de vistas asociadas a la simulación activa.
 
+= Resultados y experimento
 
 

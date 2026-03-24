@@ -3,13 +3,11 @@
 #import "@preview/wrap-it:0.1.1": wrap-content
 
 #import "@preview/diagraph:0.2.5": *
-#bibliography("biblio.bib")
-#set text(spacing: 120%, lang: "es")
-#set text(
-  lang: "sp"
-)
 
-#let title = "Aplicación de analisis de redes de bicicletas compartidas"
+#set text(spacing: 120%, lang: "sp")
+
+
+#let title = "Aplicación de análisis de redes de bicicletas compartidas"
 #set page(numbering: "- 1 -")
 
 /* Palabras wapas wapas */
@@ -33,7 +31,7 @@
     #align(center)[
       #grid(
         columns: 3,
-        image(width: 50%, "assests/portada/EtsiLogo.png"), h(90pt), image(width: 70%, "assests/portada/UhuLogo.png"),
+        image(width: 50%, "resources/images/portada/EtsiLogo.png"), h(90pt), image(width: 70%, "resources/images/portada/UhuLogo.png"),
       )
     ]]
 
@@ -139,7 +137,7 @@ StreamFlow Programming, Smart Cities.
 #set text(11pt)
 #pagebreak()
 
-= Introducción <intro>
+= Introducción <intro> 
 \
 La creciente presión sobre los sistemas de transporte urbano ha impulsado la búsqueda de alternativas más sostenibles, flexibles y eficientes que complementen al vehículo privado y al transporte público tradicional. En este contexto, los sistemas de bicicletas compartidas se han consolidado en numerosas ciudades como una solución de micromovilidad que favorece la reducción de emisiones, mejora la calidad del aire y promueve hábitos de vida más saludables. No obstante, la gestión operativa de estas redes plantea retos significativos relacionados con el dimensionamiento de las estaciones, el equilibrio dinámico de la flota y la respuesta ante patrones de demanda altamente variables en el espacio y en el tiempo.
 \
@@ -155,11 +153,37 @@ Bike-sharing systems have become a key component of sustainable urban mobility, 
 
 #pagebreak()
 
+
+= Estado del arte
+
+== Sistemas de bicicletas compartidas
+
+Los sistemas de bicicletas compartidas han experimentado una rápida evolución desde sus inicios en la década de 1960. La primera generación, implementada en Ámsterdam en 1965 con las *Witte Fietsen* (bicicletas blancas de uso libre), derivó en vandalismo masivo y rápida obsolescencia @wittefietsen1965. La segunda generación, en los años 90 (ejemplo: *Bycyklen* en Copenhague, 1995), introdujo mecanismos de depósito, pero aún sufría hurtos sistemáticos. La tercera generación, consolidada desde 1998 en Rennes (*Vélos à la carte*), incorporó tecnologías de identificación electrónica (RFID, cuentas de usuario), multiplicando su implantación hasta 712 ciudades en 2014 @fishman2014.
+
+Estos sistemas operan mediante redes de estaciones fijas donde los usuarios retiran y depositan bicicletas en intervalos discretos (deltas de 5–15 minutos), generando matrices de movimientos (positivos para depósitos, negativos para retiros), vectores de capacidades y datos geoespaciales. Proveedores como JCDecaux, con plataformas como *Cyclocity* y *Vélib'* en París (lanzado en 2007 con 6.000 bicicletas), exponen datos en tiempo real vía API pública, incluyendo ocupación, trayectos y estado de estaciones @jcdecauxapi.
+
+== Herramientas de análisis y visualización de redes
+
+El análisis modela la red como grafo dirigido (estaciones como nodos, flujos como aristas), computando métricas como centralidad (degree, betweenness, closeness, eigenvector), entropía (desequilibrio espacial) y ocupación relativa @froehlich2012 @newman2010. Bibliotecas como NetworkX facilitan estos cálculos, con Pandas/NumPy para matrices temporales @networkxdocs @pandaspy.
+
+La visualización usa Leaflet/Mapbox sobre OpenStreetMap, con técnicas como Voronoi (territorios de influencia), heatmaps de densidad y mapas de desplazamientos @leafletjs @mapboxgl. Gráficos (barras de peticiones, líneas evolutivas, histogramas) se generan con Plotly/Matplotlib, integrando filtros dinámicos @plotlypy @matplotlib.
+
+#fake_heading[Trabajos relacionados]
+
+El TFG de Luis Gutiérrez Jerez (2023, Universidad de Huelva) desarrolló un simulador para la red de Sevilla, con algoritmos estocásticos basados en matrices de deltas, tendencias, capacidades y distancias precalculadas, generando visualizaciones (Voronoi, evolutivas) y análisis de stress @gutierrez2023. Este trabajo hereda directamente esa lógica algorítmica y formato de matrices en el paquete *bikesim*, refactorizándola para robustez y exponiéndola vía FastAPI, pero priorizando una interfaz web *user-friendly* que elimina comandos terminales y añade historial persistente.
+
+Otros trabajos como los de @sergiomacias2025 abordan la recompilación y ETL de datos de movilidad urbana, planteando infraestructuras para ingesta continua de fuentes heterogéneas. Aunque no se integra directa ni indirectamente en la lógica del sistema desarrollado (que asume datos ya procesados de JCDecaux), representa una línea futura de extensión para automatizar la preparación de datasets.
+
+En literatura, Soriguera et al. (2020) presentan modelos de simulación continua @soriguera2020, y Alvarez-Valdés et al. (2016) algoritmos heurísticos para reposicionamiento @alvarez2016. La plataforma combina precisión algorítmica con interactividad web @kdd2016rebalancing.
+
+
 = Motivación del proyecto
 \
 La motivación principal de este trabajo surge de la necesidad de dotar a gestores públicos, investigadores y técnicos de herramientas accesibles que permitan analizar el comportamiento de redes de bicicletas compartidas a partir de datos reales. Experiencias previas, como el desarrollo de simulaciones específicas para la red de bicicletas públicas de Sevilla, han demostrado el potencial del enfoque basado en simulación y análisis masivo de datos, pero también han puesto de manifiesto limitaciones en términos de usabilidad, acoplamiento tecnológico y dificultad para extender los experimentos a otros contextos urbanos.
 \
 Este proyecto plantea una evolución de dichas herramientas hacia una plataforma modular, _dockerizada_ y orientada a servicios, en la que el motor de simulación se expone mediante una _API REST_ y el usuario interactúa a través de una interfaz web con mapas y paneles de control. De este modo, se reduce la barrera de entrada técnica y se facilita la reutilización de la infraestructura de análisis para diferentes ciudades, conjuntos de datos o hipótesis de planificación, manteniendo al mismo tiempo un enfoque científico-técnico que permita reproducir los experimentos y validar los resultados.
+
+
 
 = Objetivos del proyecto
 \
@@ -250,32 +274,10 @@ Una vez descrita la arquitectura, el flujo interno de ejecución, la organizaci�
 De este modo, la sección siguiente no se centra ya en cómo está construida la aplicación, sino en qué conocimiento permite extraer y en qué medida los resultados obtenidos pueden servir como apoyo a la toma de decisiones en contextos de movilidad urbana sostenible.
 
 \
-= Estado del arte
-
-#fake_heading[Sistemas de bicicletas compartidas]
-
-Los sistemas de bicicletas compartidas han experimentado una rápida evolución desde sus inicios en la década de 1960. La primera generación, implementada en Ámsterdam en 1965 con las *Witte Fietsen* (bicicletas blancas de uso libre), derivó en vandalismo masivo y rápida obsolescencia @wittefietsen1965. La segunda generación, en los años 90 (ejemplo: *Bycyklen* en Copenhague, 1995), introdujo mecanismos de depósito, pero aún sufría hurtos sistemáticos. La tercera generación, consolidada desde 1998 en Rennes (*Vélos à la carte*), incorporó tecnologías de identificación electrónica (RFID, cuentas de usuario), multiplicando su implantación hasta 712 ciudades en 2014 @fishman2014.
-
-Estos sistemas operan mediante redes de estaciones fijas donde los usuarios retiran y depositan bicicletas en intervalos discretos (deltas de 5–15 minutos), generando matrices de movimientos (positivos para depósitos, negativos para retiros), vectores de capacidades y datos geoespaciales. Proveedores como JCDecaux, con plataformas como *Cyclocity* y *Vélib'* en París (lanzado en 2007 con 6.000 bicicletas), exponen datos en tiempo real vía API pública, incluyendo ocupación, trayectos y estado de estaciones @jcdecauxapi.
-
-#fake_heading[Herramientas de análisis y visualización de redes]
-
-El análisis modela la red como grafo dirigido (estaciones como nodos, flujos como aristas), computando métricas como centralidad (degree, betweenness, closeness, eigenvector), entropía (desequilibrio espacial) y ocupación relativa @froehlich2012 @newman2010. Bibliotecas como NetworkX facilitan estos cálculos, con Pandas/NumPy para matrices temporales @networkxdocs @pandaspy.
-
-La visualización usa Leaflet/Mapbox sobre OpenStreetMap, con técnicas como Voronoi (territorios de influencia), heatmaps de densidad y mapas de desplazamientos @leafletjs @mapboxgl. Gráficos (barras de peticiones, líneas evolutivas, histogramas) se generan con Plotly/Matplotlib, integrando filtros dinámicos @plotlypy @matplotlib.
-
-#fake_heading[Trabajos relacionados]
-
-El TFG de Luis Gutiérrez Jerez (2023, Universidad de Huelva) desarrolló un simulador para la red de Sevilla, con algoritmos estocásticos basados en matrices de deltas, tendencias, capacidades y distancias precalculadas, generando visualizaciones (Voronoi, evolutivas) y análisis de stress @gutierrez2023. Este trabajo hereda directamente esa lógica algorítmica y formato de matrices en el paquete *bikesim*, refactorizándola para robustez y exponiéndola vía FastAPI, pero priorizando una interfaz web *user-friendly* que elimina comandos terminales y añade historial persistente.
-
-Otros trabajos como los de @sergiomacias2025 abordan la recompilación y ETL de datos de movilidad urbana, planteando infraestructuras para ingesta continua de fuentes heterogéneas. Aunque no se integra directa ni indirectamente en la lógica del sistema desarrollado (que asume datos ya procesados de JCDecaux), representa una línea futura de extensión para automatizar la preparación de datasets.
-
-En literatura, Soriguera et al. (2020) presentan modelos de simulación continua @soriguera2020, y Alvarez-Valdés et al. (2016) algoritmos heurísticos para reposicionamiento @alvarez2016. La plataforma combina precisión algorítmica con interactividad web @kdd2016rebalancing.
-
 
 = Desarrollo de la aplicación
 
-#fake_heading[Arquitectura del sistema]
+== Arquitectura del sistema
 
 La aplicación desarrollada sigue una arquitectura cliente-servidor desacoplada, organizada en tres capas principales: un frontend web implementado con Next.js, una API REST construida con FastAPI y un backend de análisis y simulación encapsulado en el paquete `bikesim`.
 
@@ -289,7 +291,7 @@ El frontend consume la API mediante distintos endpoints, entre ellos _/exe/simul
 
 
 
-#fake_heading[Flujo de ejecución de una simulación]
+== Flujo de ejecución de una simulación
 
 El flujo principal de uso comienza cuando el usuario crea una nueva simulación desde el frontend. Para ello, introduce un nombre identificativo (opcional), selecciona los ficheros de entrada y configura parámetros como el porcentaje de stress, el coste de caminar, el tipo de stress aplicado y el valor de delta temporal. Una vez confirmados estos datos, el frontend envía una petición HTTP al backend en formato `.json`.
 
@@ -331,12 +333,12 @@ La API recibe la petición, valida su estructura y la transfiere al orquestador 
 
 Durante la ejecución, el sistema procesa las matrices de entrada, aplica el algoritmo estocástico heredado del trabajo de Gutiérrez Jerez @gutierrez2023 y genera como salida un conjunto de matrices derivadas que describen el comportamiento del sistema. Entre estas salidas se incluyen la ocupación original, la ocupación relativa, la matriz de desplazamientos, los kilómetros producidos al coger o dejar bicicletas, los kilómetros ficticios asociados a tendencias no satisfechas, las matrices de peticiones resueltas y no resueltas —tanto reales como ficticias— y un fichero de resumen de ejecución.
 
-#fake_heading[Persistencia y organización de resultados]
+== Persistencia y organización de resultados
 
 Uno de los objetivos principales del sistema es evitar la pérdida de contexto entre sesiones de trabajo. Para ello, cada simulación ejecutada genera un identificador único compuesto por una marca temporal y una codificación compacta de los parámetros más relevantes, como el tipo de stress, el porcentaje aplicado, el coste de caminar y el delta temporal. Esta convención de nombres permite reconocer rápidamente las características principales de una ejecución sin necesidad de abrir manualmente sus archivos asociados.
 
 #figure(
-  image("resources/images/SimulationParametersView.png"),
+  image("resources/images/SimulationParametersView.png", width: 50%),
   caption: [Visualización de los parámetros de una simulación a partir del identificador asociado.],
 )<SimulationParametersView>
 
@@ -369,7 +371,7 @@ Uno de los objetivos principales del sistema es evitar la pérdida de contexto e
 }
 ```,
   supplement: ".JSON",
-  caption: [Entrada en `simulations_history.json` con los metadatos de una simulación.],
+  caption: [Entrada en `simulations_history.json` con los metadatos de una simulación.]
 )<jsonTodasSimulaciones>
 
 Además, el sistema mantiene un fichero global denominado `simulations_history.json`, que actúa como catálogo general de simulaciones. En él se registran datos como el nombre de la simulación, el identificador interno, la ciudad, el número de estaciones, el número de bicicletas, la capacidad total, las coordenadas medias y los parámetros concretos utilizados.
@@ -419,7 +421,7 @@ Aunque la aplicacion sea web, la versión actual esta pensaba para trabajar loca
 
 = Interfaz de usuario
 
-#fake_heading[Módulos funcionales de la aplicación]
+== Módulos funcionales de la aplicación
 
 Una vez seleccionada una simulación, la aplicación ofrece un conjunto de módulos funcionales organizados en distintas áreas de trabajo. Todos ellos comparten la misma idea de persistencia: cualquier artefacto generado queda asociado a la simulación activa y puede recuperarse posteriormente desde el historial.
 
@@ -543,3 +545,4 @@ Una vez finalizada la ejecución, el usuario accede a un conjunto de vistas asoc
 = Resultados y experimento
 
 
+#bibliography("biblio.bib")
